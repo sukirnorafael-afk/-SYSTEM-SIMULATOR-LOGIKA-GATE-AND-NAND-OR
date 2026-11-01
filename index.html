@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulator Logika Digital Permesinan Kapal (TTL vs CMOS vs ECL)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        ship: {
+                            dark: '#0b132b',
+                            panel: '#1c2541',
+                            card: '#151c33',
+                            accent: '#3a86ff',
+                            ttl: '#f59e0b',
+                            cmos: '#10b981',
+                            ecl: '#ec4899',
+                            alert: '#ef4444',
+                            safe: '#10b981',
+                            warning: '#f59e0b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .led-off {
+            background-color: #334155;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+        }
+        .led-on-green {
+            background-color: #10b981;
+            box-shadow: 0 0 15px #10b981, inset 0 1px 2px #d1fae5;
+        }
+        .led-on-red {
+            background-color: #ef4444;
+            box-shadow: 0 0 15px #ef4444, inset 0 1px 2px #fee2e2;
+        }
+        .led-on-amber {
+            background-color: #f59e0b;
+            box-shadow: 0 0 15px #f59e0b, inset 0 1px 2px #fef3c7;
+        }
+        .led-on-blue {
+            background-color: #3b82f6;
+            box-shadow: 0 0 15px #3b82f6, inset 0 1px 2px #dbeafe;
+        }
+        .gate-svg {
+            filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.4));
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b132b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-ship-dark text-slate-100 min-h-screen font-sans flex flex-col justify-between selection:bg-sky-500 selection:text-white">
+
+    <!-- Header Console -->
+    <header class="bg-ship-panel border-b border-slate-700 shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col lg:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-sky-600 p-2.5 rounded-xl text-white shadow-lg flex items-center justify-center">
+                    <i class="fa-solid fa-ship text-2xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-lg leading-tight tracking-wide text-white">SYSTEM SIMULATOR LOGIKA DIGITAL PERMESINAN KAPAL</h1>
+                        <span class="text-[10px] font-mono bg-sky-950 text-sky-400 border border-sky-700 px-2 py-0.5 rounded-full font-semibold">v2.0 Advanced</span>
+                    </div>
+                    <p class="text-xs text-sky-400 font-medium mt-0.5">Studi Komparasi Teknologi (TTL vs CMOS vs ECL) & Otomasi Interlock Permesinan</p>
+                </div>
+            </div>
+
+            <!-- Global Tech Switch Selector -->
+            <div class="flex items-center bg-slate-950/90 p-1.5 rounded-xl border border-slate-700/80 gap-1.5 text-xs">
+                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2">Teknologi Logic IC:</span>
+                <button onclick="setGlobalTech('TTL')" id="tech-btn-TTL" class="px-3 py-1.5 rounded-lg font-bold font-mono transition-all duration-200 bg-amber-500 text-slate-950 shadow">
+                    TTL (74LS)
+                </button>
+                <button onclick="setGlobalTech('CMOS')" id="tech-btn-CMOS" class="px-3 py-1.5 rounded-lg font-bold font-mono transition-all duration-200 text-slate-400 hover:text-white">
+                    CMOS (4000/74HC)
+                </button>
+                <button onclick="setGlobalTech('ECL')" id="tech-btn-ECL" class="px-3 py-1.5 rounded-lg font-bold font-mono transition-all duration-200 text-slate-400 hover:text-white">
+                    ECL (MC100K)
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800">
+            <nav class="flex overflow-x-auto space-x-1 py-2 text-xs font-medium">
+                <button onclick="switchTab('tech-compare')" id="tab-tech-compare" class="px-3.5 py-2 rounded-lg transition-all duration-200 text-white bg-sky-600 font-semibold whitespace-nowrap">
+                    <i class="fa-solid fa-scale-balanced mr-1.5"></i> Perbandingan 3 Teknologi (TTL vs CMOS vs ECL)
+                </button>
+                <button onclick="switchTab('basic-gates')" id="tab-basic-gates" class="px-3.5 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white whitespace-nowrap">
+                    <i class="fa-solid fa-microchip mr-1.5"></i> Simulator 7 Gerbang Logika
+                </button>
+                <button onclick="switchTab('ship-cases')" id="tab-ship-cases" class="px-3.5 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white whitespace-nowrap">
+                    <i class="fa-solid fa-gears mr-1.5"></i> 7 Studi Kasus Permesinan Kapal
+                </button>
+                <button onclick="switchTab('components')" id="tab-components" class="px-3.5 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white whitespace-nowrap">
+                    <i class="fa-solid fa-plug mr-1.5"></i> Modul Interface & Komponen Kapal
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- ================= TAB 1: PERBANDINGAN 3 TEKNOLOGI LOGIKA ================= -->
+        <section id="section-tech-compare" class="space-y-6">
+            
+            <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-microchip text-sky-400"></i> Studi Analisis Perbandingan Keluarga Logika (Logic Families)
+                </h2>
+                <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Setiap gerbang logika ($Y = A \cdot B$ atau $Y = A + B$) dapat diproduksi menggunakan arsitektur fisik transistor yang berbeda. Di bawah ini adalah perbandingan karakteristik listrik dan fisik antara **TTL**, **CMOS**, dan **ECL** dalam aplikasi industri otomasi perkapalan.
+                </p>
+            </div>
+
+            <!-- Comparison Cards Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- TTL CARD -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-amber-500/40 shadow-xl flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-amber-500/20 text-amber-400 text-[10px] font-mono px-3 py-1 rounded-bl-lg font-bold border-l border-b border-amber-500/30">
+                        BJT Standard
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="bg-amber-500/20 text-amber-400 p-3 rounded-xl border border-amber-500/40">
+                                <i class="fa-solid fa-bolt text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">TTL (74LS Series)</h3>
+                                <p class="text-xs text-amber-400 font-mono">Transistor-Transistor Logic</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 text-xs">
+                            <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                <span class="text-slate-400 block text-[11px] mb-1">Arsitektur Transistor Utama:</span>
+                                <span class="font-semibold text-white">Bipolar Junction Transistor (BJT NPN/PNP)</span>
+                            </div>
+
+                            <table class="w-full text-slate-300 text-left font-mono text-[11px]">
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Tegangan VCC:</td>
+                                    <td class="py-1.5 font-bold text-amber-400 text-right">+5.0 V DC (±0.25V)</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Status LOW (V_IL):</td>
+                                    <td class="py-1.5 text-right">0.0V s/d 0.8V</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Status HIGH (V_IH):</td>
+                                    <td class="py-1.5 text-right">2.0V s/d 5.0V</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Propagation Delay:</td>
+                                    <td class="py-1.5 text-right">9 - 10 ns (Sedang)</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Konsumsi Daya:</td>
+                                    <td class="py-1.5 text-right">2 mW / Gate</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 text-slate-400">Noise Margin:</td>
+                                    <td class="py-1.5 text-right">0.4 V (Cukup)</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+                        <strong class="text-slate-200">Aplikasi Kapal:</strong> Modul kontrol logika klasik 74LS, interlock keselamatan umum di konsol ECR.
+                    </div>
+                </div>
+
+                <!-- CMOS CARD -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-emerald-500/40 shadow-xl flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-emerald-500/20 text-emerald-400 text-[10px] font-mono px-3 py-1 rounded-bl-lg font-bold border-l border-b border-emerald-500/30">
+                        Low Power MOSFET
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/40">
+                                <i class="fa-solid fa-leaf text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">CMOS (4000 / 74HC)</h3>
+                                <p class="text-xs text-emerald-400 font-mono">Complementary Metal-Oxide-Semi</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 text-xs">
+                            <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                <span class="text-slate-400 block text-[11px] mb-1">Arsitektur Transistor Utama:</span>
+                                <span class="font-semibold text-white">Complementary MOSFET (N-Ch & P-Ch)</span>
+                            </div>
+
+                            <table class="w-full text-slate-300 text-left font-mono text-[11px]">
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Tegangan VCC:</td>
+                                    <td class="py-1.5 font-bold text-emerald-400 text-right">+3.0V s/d +15.0 V DC</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Status LOW (V_IL):</td>
+                                    <td class="py-1.5 text-right">0.0V s/d 1.5V (pada 5V)</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Status HIGH (V_IH):</td>
+                                    <td class="py-1.5 text-right">3.5V s/d 5.0V (pada 5V)</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Propagation Delay:</td>
+                                    <td class="py-1.5 text-right">15 - 30 ns (Lambat-Sedang)</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Konsumsi Daya:</td>
+                                    <td class="py-1.5 text-right">0.01 mW (Sangat Hemat)</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 text-slate-400">Noise Margin:</td>
+                                    <td class="py-1.5 text-right">1.5 V (Sangat Tinggi)</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+                        <strong class="text-slate-200">Aplikasi Kapal:</strong> PLC modern (S7-1200/200), mikrokontroler instrumen kapal, jam alarm digital.
+                    </div>
+                </div>
+
+                <!-- ECL CARD -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-pink-500/40 shadow-xl flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-pink-500/20 text-pink-400 text-[10px] font-mono px-3 py-1 rounded-bl-lg font-bold border-l border-b border-pink-500/30">
+                        Ultra High-Speed
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="bg-pink-500/20 text-pink-400 p-3 rounded-xl border border-pink-500/40">
+                                <i class="fa-solid fa-gauge-high text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">ECL (MC100K Series)</h3>
+                                <p class="text-xs text-pink-400 font-mono">Emitter-Coupled Logic</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 text-xs">
+                            <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                <span class="text-slate-400 block text-[11px] mb-1">Arsitektur Transistor Utama:</span>
+                                <span class="font-semibold text-white">Differential Pair Current-Steering BJT</span>
+                            </div>
+
+                            <table class="w-full text-slate-300 text-left font-mono text-[11px]">
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Tegangan VEE:</td>
+                                    <td class="py-1.5 font-bold text-pink-400 text-right">-5.2 V DC (Negatif)</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Status LOW (V_IL):</td>
+                                    <td class="py-1.5 text-right">-1.75V s/d -1.60V</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Status HIGH (V_IH):</td>
+                                    <td class="py-1.5 text-right">-0.98V s/d -0.88V</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Propagation Delay:</td>
+                                    <td class="py-1.5 text-right">&lt; 1.0 ns (Super Cepat)</td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="py-1.5 text-slate-400">Konsumsi Daya:</td>
+                                    <td class="py-1.5 text-right">25 - 50 mW (Tinggi/Boros)</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 text-slate-400">Noise Margin:</td>
+                                    <td class="py-1.5 text-right">0.2 V (Rendah/Sensitif)</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+                        <strong class="text-slate-200">Aplikasi Kapal:</strong> Radar navigaas ARPA GHz, transiver serat optik, sistem komunikasi satelit maritim.
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Deep Architectural Table -->
+            <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl overflow-hidden">
+                <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-table text-sky-400"></i> Tabel Matriks Evaluasi Parameter Teknis (TTL vs CMOS vs ECL)
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-900 text-slate-300 border-b border-slate-700">
+                            <tr>
+                                <th class="py-3 px-4">Parameter Spesifikasi</th>
+                                <th class="py-3 px-4 text-amber-400">TTL (74LS)</th>
+                                <th class="py-3 px-4 text-emerald-400">CMOS (74HC/4000)</th>
+                                <th class="py-3 px-4 text-pink-400">ECL (MC100K)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800 text-slate-300">
+                            <tr class="hover:bg-slate-900/40">
+                                <td class="py-2.5 px-4 font-semibold text-slate-200">Jenis Transistor Internal</td>
+                                <td class="py-2.5 px-4">Bipolar BJT (NPN/PNP)</td>
+                                <td class="py-2.5 px-4">MOSFET (P-Channel & N-Channel)</td>
+                                <td class="py-2.5 px-4">Bipolar BJT (Non-Saturating)</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/40">
+                                <td class="py-2.5 px-4 font-semibold text-slate-200">Prinsip Kerja Saklar</td>
+                                <td class="py-2.5 px-4">Saturasi Arus Basis BJT</td>
+                                <td class="py-2.5 px-4">Pengisian Muatan Gerbang Gate MOS</td>
+                                <td class="py-2.5 px-4">Current Steering Differential Pair</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/40">
+                                <td class="py-2.5 px-4 font-semibold text-slate-200">Rentang Tegangan Kerja</td>
+                                <td class="py-2.5 px-4">+4.75V s/d +5.25V DC</td>
+                                <td class="py-2.5 px-4">+2.0V s/d +6.0V (74HC) / +15V (4000)</td>
+                                <td class="py-2.5 px-4">-5.2V DC (Sistem Negatif)</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/40">
+                                <td class="py-2.5 px-4 font-semibold text-slate-200">Kekuatan Terhadap Noise Motor Kapal</td>
+                                <td class="py-2.5 px-4">Sedang (0.4V)</td>
+                                <td class="py-2.5 px-4 text-emerald-400 font-bold">Sangat Baik / Tinggi (1.5V)</td>
+                                <td class="py-2.5 px-4 text-rose-400">Rendah / Rentan (0.2V)</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/40">
+                                <td class="py-2.5 px-4 font-semibold text-slate-200">Waktu Tunda / Speed</td>
+                                <td class="py-2.5 px-4">9 nanodetik</td>
+                                <td class="py-2.5 px-4">25 nanodetik</td>
+                                <td class="py-2.5 px-4 text-pink-400 font-bold">&lt; 0.8 nanodetik (Super Fast)</td>
+                            </tr>
+                            <tr class="hover:bg-slate-900/40">
+                                <td class="py-2.5 px-4 font-semibold text-slate-200">Impedansi Input (R_in)</td>
+                                <td class="py-2.5 px-4">Rendah (Menyedot arus input)</td>
+                                <td class="py-2.5 px-4 text-emerald-400">Sangat Tinggi (Hampir $\infty$)</td>
+                                <td class="py-2.5 px-4">Sedang ($50\,\Omega$ terminated)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ================= TAB 2: SIMULATOR 7 GERBANG LOGIKA ================= -->
+        <section id="section-basic-gates" class="hidden space-y-6">
+            
+            <div class="bg-ship-panel rounded-xl p-4 border border-slate-700 shadow-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                            Pilih Jenis Gerbang Logika:
+                        </label>
+                        <p class="text-xs text-slate-400">Klik salah satu gerbang untuk mensimulasikan karakteristik fisiknya.</p>
+                    </div>
+                    <div class="bg-slate-900 px-3 py-1 rounded border border-slate-700 text-xs font-mono">
+                        Aktif Teknologi: <span id="current-tech-badge" class="font-bold text-amber-400">TTL (74LS)</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mt-3">
+                    <button onclick="selectGate('AND')" id="btn-AND" class="gate-btn border border-sky-500/30 bg-sky-950/40 text-sky-300 font-bold py-2.5 px-3 rounded-lg flex flex-col items-center gap-1 transition-all">
+                        <span class="text-base">AND</span>
+                        <span class="text-[10px] font-mono text-slate-400" id="chip-id-AND">74LS08</span>
+                    </button>
+                    <button onclick="selectGate('OR')" id="btn-OR" class="gate-btn border border-slate-700 bg-slate-800/60 text-slate-300 font-bold py-2.5 px-3 rounded-lg flex flex-col items-center gap-1 transition-all">
+                        <span class="text-base">OR</span>
+                        <span class="text-[10px] font-mono text-slate-400" id="chip-id-OR">74LS32</span>
+                    </button>
+                    <button onclick="selectGate('NOT')" id="btn-NOT" class="gate-btn border border-slate-700 bg-slate-800/60 text-slate-300 font-bold py-2.5 px-3 rounded-lg flex flex-col items-center gap-1 transition-all">
+                        <span class="text-base">NOT</span>
+                        <span class="text-[10px] font-mono text-slate-400" id="chip-id-NOT">74LS04</span>
+                    </button>
+                    <button onclick="selectGate('NAND')" id="btn-NAND" class="gate-btn border border-slate-700 bg-slate-800/60 text-slate-300 font-bold py-2.5 px-3 rounded-lg flex flex-col items-center gap-1 transition-all">
+                        <span class="text-base">NAND</span>
+                        <span class="text-[10px] font-mono text-slate-400" id="chip-id-NAND">74LS00</span>
+                    </button>
+                    <button onclick="selectGate('NOR')" id="btn-NOR" class="gate-btn border border-slate-700 bg-slate-800/60 text-slate-300 font-bold py-2.5 px-3 rounded-lg flex flex-col items-center gap-1 transition-all">
+                        <span class="text-base">NOR</span>
+                        <span class="text-[10px] font-mono text-slate-400" id="chip-id-NOR">74LS02</span>
+                    </button>
+                    <button onclick="selectGate('XOR')" id="btn-XOR" class="gate-btn border border-slate-700 bg-slate-800/60 text-slate-300 font-bold py-2.5 px-3 rounded-lg flex flex-col items-center gap-1 transition-all">
+                        <span class="text-base">XOR</span>
+                        <span class="text-[10px] font-mono text-slate-400" id="chip-id-XOR">74LS86</span>
+                    </button>
+                    <button onclick="selectGate('XNOR')" id="btn-XNOR" class="gate-btn border border-slate-700 bg-slate-800/60 text-slate-300 font-bold py-2.5 px-3 rounded-lg flex flex-col items-center gap-1 transition-all">
+                        <span class="text-base">XNOR</span>
+                        <span class="text-[10px] font-mono text-slate-400" id="chip-id-XNOR">74LS266</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- Left Column: Circuit Workbench -->
+                <div class="lg:col-span-7 bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700">
+                            <div>
+                                <span class="bg-sky-500/10 text-sky-400 border border-sky-500/30 text-xs font-mono font-semibold px-2.5 py-1 rounded">
+                                    <i class="fa-solid fa-microchip mr-1"></i> IC Kode: <span id="display-ic-name">74LS08</span>
+                                </span>
+                                <h2 class="text-xl font-bold text-white mt-1" id="display-gate-title">Gerbang AND (AND Gate)</h2>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs text-slate-400 block">Persamaan Logika:</span>
+                                <span class="font-mono text-xl font-bold text-sky-300 bg-slate-900 px-3 py-1 rounded border border-slate-800 block" id="display-formula">Y = A · B</span>
+                            </div>
+                        </div>
+
+                        <!-- Circuit Interactive Canvas area -->
+                        <div class="bg-slate-950 rounded-xl p-6 relative border border-slate-800 min-h-[320px] flex flex-col justify-center items-center overflow-hidden">
+                            <div class="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
+
+                            <div class="relative z-10 w-full max-w-lg flex items-center justify-between gap-4">
+                                
+                                <!-- INPUT CONTROLS -->
+                                <div class="flex flex-col gap-6 items-center">
+                                    <!-- Input A -->
+                                    <div class="flex flex-col items-center bg-slate-900/90 p-3 rounded-xl border border-slate-700 shadow-lg w-28">
+                                        <span class="text-xs font-bold text-slate-300 mb-1">INPUT A</span>
+                                        <button onclick="toggleInput('A')" id="btn-toggle-A" class="w-full py-2 px-3 rounded-lg font-mono font-bold text-sm transition-all duration-200 bg-slate-800 text-slate-400 border border-slate-600 hover:border-slate-500 flex items-center justify-center gap-2">
+                                            <span class="w-3 h-3 rounded-full bg-slate-600" id="indicator-input-A"></span>
+                                            <span id="text-input-A">0 (LOW)</span>
+                                        </button>
+                                        <span class="text-[10px] font-mono text-slate-400 mt-1.5" id="voltage-A">0.2 V DC</span>
+                                    </div>
+
+                                    <!-- Input B -->
+                                    <div id="container-input-B" class="flex flex-col items-center bg-slate-900/90 p-3 rounded-xl border border-slate-700 shadow-lg w-28">
+                                        <span class="text-xs font-bold text-slate-300 mb-1">INPUT B</span>
+                                        <button onclick="toggleInput('B')" id="btn-toggle-B" class="w-full py-2 px-3 rounded-lg font-mono font-bold text-sm transition-all duration-200 bg-slate-800 text-slate-400 border border-slate-600 hover:border-slate-500 flex items-center justify-center gap-2">
+                                            <span class="w-3 h-3 rounded-full bg-slate-600" id="indicator-input-B"></span>
+                                            <span id="text-input-B">0 (LOW)</span>
+                                        </button>
+                                        <span class="text-[10px] font-mono text-slate-400 mt-1.5" id="voltage-B">0.2 V DC</span>
+                                    </div>
+                                </div>
+
+                                <!-- GATE SVG DISPLAY -->
+                                <div class="flex-1 flex justify-center py-4">
+                                    <svg id="gate-svg-element" class="gate-svg w-44 h-32 text-sky-400" viewBox="0 0 160 100" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    </svg>
+                                </div>
+
+                                <!-- OUTPUT DISPLAY -->
+                                <div class="flex flex-col items-center bg-slate-900/90 p-4 rounded-xl border border-slate-700 shadow-lg w-32">
+                                    <span class="text-xs font-bold text-slate-300 mb-2">OUTPUT (Y)</span>
+                                    
+                                    <div id="led-output" class="w-12 h-12 rounded-full led-off flex items-center justify-center transition-all duration-300 border-2 border-slate-600 mb-2">
+                                        <i class="fa-solid fa-lightbulb text-slate-900 text-xl" id="led-icon"></i>
+                                    </div>
+
+                                    <span id="text-output" class="font-mono font-bold text-sm text-slate-400">0 (LOW)</span>
+                                    <span id="voltage-output" class="text-[10px] font-mono text-slate-400 mt-1">0.3 V DC</span>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description & Live Specs Footnote -->
+                    <div class="mt-4 p-3 bg-slate-900/80 rounded-lg border border-slate-800 text-xs text-slate-300 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <span class="text-[10px] font-bold text-sky-400 uppercase tracking-wider block mb-1">Prinsip Kerja Gerbang:</span>
+                            <p id="gate-description" class="leading-relaxed text-[11px] text-slate-300"></p>
+                        </div>
+                        <div class="border-t md:border-t-0 md:border-l border-slate-800 pt-2 md:pt-0 md:pl-3 font-mono text-[11px] space-y-1">
+                            <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider block mb-1">Real-time Tech Parameters:</span>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Propagation Delay:</span>
+                                <span id="spec-delay" class="font-bold text-white">9 ns</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Power Dissipation:</span>
+                                <span id="spec-power" class="font-bold text-white">2.0 mW</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Supply Voltage (VCC):</span>
+                                <span id="spec-vcc" class="font-bold text-white">+5.0 V DC</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Interactive Truth Table & Info -->
+                <div class="lg:col-span-5 flex flex-col gap-6">
+
+                    <!-- Truth Table -->
+                    <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl">
+                        <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center justify-between">
+                            <span><i class="fa-solid fa-table-list text-sky-400 mr-2"></i>Tabel Kebenaran (Truth Table)</span>
+                            <span class="text-[10px] bg-slate-800 text-slate-400 font-normal px-2 py-0.5 rounded border border-slate-700">Auto-Highlight Active Row</span>
+                        </h3>
+
+                        <div class="overflow-hidden rounded-lg border border-slate-700">
+                            <table class="w-full text-center font-mono text-sm">
+                                <thead class="bg-slate-900 text-slate-400 text-xs">
+                                    <tr>
+                                        <th class="py-2.5 px-3 border-b border-slate-700">Input A</th>
+                                        <th class="py-2.5 px-3 border-b border-slate-700 col-input-b">Input B</th>
+                                        <th class="py-2.5 px-3 border-b border-slate-700 bg-slate-800/80 text-sky-400">Output (Y)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="truth-table-body" class="divide-y divide-slate-700/60 bg-slate-900/40">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Marine Application -->
+                    <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex-1 flex flex-col justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded uppercase tracking-wider">
+                                Penerapan Otomasi Kapal
+                            </span>
+                            <h4 class="text-base font-bold text-white mt-2" id="ship-app-title">Main Engine Start Permissive</h4>
+                            <p class="text-xs text-slate-300 mt-2 leading-relaxed" id="ship-app-desc">
+                                Memastikan mesin utama hanya bisa distart jika tekanan udara start mencukupi DAN turning gear sudah lepas.
+                            </p>
+                        </div>
+                        <div class="mt-4 p-3 bg-slate-900/80 rounded-lg border border-slate-800 font-mono text-xs text-slate-300">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-slate-400">Status Output Sistem:</span>
+                                <span id="ship-app-status" class="font-bold text-rose-400">BLOCKED (0)</span>
+                            </div>
+                            <div class="text-[11px] text-slate-400 italic" id="ship-app-reason">
+                                Kondisi logika belum terpenuhi oleh kombinasi input.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ================= TAB 3: 7 CASE PERMESINAN KAPAL NYATA ================= -->
+        <section id="section-ship-cases" class="hidden space-y-6">
+            
+            <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="max-w-3xl">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-anchor text-sky-400"></i> 7 Case Permesinan Kapal Nyata (Interlock & Alarm)
+                    </h2>
+                    <p class="text-xs text-slate-300 mt-1">
+                        Implementasi langsung 7 gerbang logika pada sistem interlock keselamatan permesinan kapal modern. Tekan tombol input sensor untuk mensimulasikan kejadian di kamar mesin (ECR)!
+                    </p>
+                </div>
+                <div class="bg-slate-900 px-3 py-2 rounded-lg border border-slate-700 text-xs font-mono text-sky-400 flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span>Live Interlock Matrix</span>
+                </div>
+            </div>
+
+            <!-- 7 Cases Grid Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+
+                <!-- CASE 1: AND GATE -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="bg-sky-500/10 text-sky-400 text-xs font-mono px-2 py-0.5 rounded border border-sky-500/30">1. AND Gate (Y = A · B · C)</span>
+                                <h3 class="text-base font-bold text-white mt-1">Main Engine Start Permissive</h3>
+                            </div>
+                            <span class="font-mono text-xs font-bold text-amber-300 bg-slate-900 px-2 py-1 rounded border border-slate-700" id="case-ic-1">74LS08</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mb-4">
+                            Start mesin induk <strong>HANYA diizinkan (1)</strong> jika Angin Start cukup (1) <strong>DAN</strong> Turning Gear disengaged (1) <strong>DAN</strong> Emergency Stop diset aman (1).
+                        </p>
+
+                        <div class="space-y-2.5 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                            <div class="flex items-center justify-between text-xs">
+                                <span>A: Starting Air Press ≥ 25 Bar</span>
+                                <button onclick="toggleCase('c1_a')" id="btn-c1-a" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-rose-400 border border-slate-700">0 (LOW AIR)</button>
+                            </div>
+                            <div class="flex items-center justify-between text-xs border-t border-slate-800/80 pt-2">
+                                <span>B: Turning Gear Position</span>
+                                <button onclick="toggleCase('c1_b')" id="btn-c1-b" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-rose-400 border border-slate-700">0 (ENGAGED)</button>
+                            </div>
+                            <div class="flex items-center justify-between text-xs border-t border-slate-800/80 pt-2">
+                                <span>C: E-Stop Reset State</span>
+                                <button onclick="toggleCase('c1_c')" id="btn-c1-c" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-emerald-950 text-emerald-400 border border-emerald-800">1 (NORMAL)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="box-c1-res" class="mt-4 p-3 rounded-lg border bg-slate-900/80 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <div id="led-c1" class="w-7 h-7 rounded-full led-off"></div>
+                            <span id="txt-c1" class="font-bold text-rose-400">START BLOCKED (0)</span>
+                        </div>
+                        <span id="formula-c1" class="font-mono text-[11px] text-slate-400">Y = 0 · 0 · 1 = 0</span>
+                    </div>
+                </div>
+
+                <!-- CASE 2: OR GATE -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="bg-amber-500/10 text-amber-400 text-xs font-mono px-2 py-0.5 rounded border border-amber-500/30">2. OR Gate (Y = A + B + C)</span>
+                                <h3 class="text-base font-bold text-white mt-1">Machinery Master Alarm</h3>
+                            </div>
+                            <span class="font-mono text-xs font-bold text-amber-300 bg-slate-900 px-2 py-1 rounded border border-slate-700" id="case-ic-2">74LS32</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mb-4">
+                            Sirine Alarm ECR akan <strong>BUNYI (1)</strong> jika <strong>salah satu atau lebih</strong> sensor mendeteksi bahaya (Tekanan Oli Drop / Suhu Air Tinggi / Water Bilge High).
+                        </p>
+
+                        <div class="space-y-2.5 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                            <div class="flex items-center justify-between text-xs">
+                                <span>A: Lube Oil Low Pressure</span>
+                                <button onclick="toggleCase('c2_a')" id="btn-c2-a" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-emerald-400 border border-slate-700">0 (NORMAL)</button>
+                            </div>
+                            <div class="flex items-center justify-between text-xs border-t border-slate-800/80 pt-2">
+                                <span>B: Cooling Water High Temp</span>
+                                <button onclick="toggleCase('c2_b')" id="btn-c2-b" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-emerald-400 border border-slate-700">0 (NORMAL)</button>
+                            </div>
+                            <div class="flex items-center justify-between text-xs border-t border-slate-800/80 pt-2">
+                                <span>C: E/R Bilge High Level</span>
+                                <button onclick="toggleCase('c2_c')" id="btn-c2-c" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-emerald-400 border border-slate-700">0 (NORMAL)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="box-c2-res" class="mt-4 p-3 rounded-lg border bg-slate-900/80 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <div id="led-c2" class="w-7 h-7 rounded-full led-off"></div>
+                            <span id="txt-c2" class="font-bold text-emerald-400">SYSTEM NORMAL (0)</span>
+                        </div>
+                        <span id="formula-c2" class="font-mono text-[11px] text-slate-400">Y = 0 + 0 + 0 = 0</span>
+                    </div>
+                </div>
+
+                <!-- CASE 3: NOT GATE -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="bg-purple-500/10 text-purple-400 text-xs font-mono px-2 py-0.5 rounded border border-purple-500/30">3. NOT Gate (Y = Ā)</span>
+                                <h3 class="text-base font-bold text-white mt-1">Active-Low Safety Trip Loop</h3>
+                            </div>
+                            <span class="font-mono text-xs font-bold text-amber-300 bg-slate-900 px-2 py-1 rounded border border-slate-700" id="case-ic-3">74LS04</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mb-4">
+                            Sistem proteksi menggunakan loop <i>Normally Closed (NC)</i>. Jika kabel putus atau sakelar dibuka (Signal=0), gerbang NOT membaliknya menjadi <strong>TRIP ACTIVE (1)</strong>.
+                        </p>
+
+                        <div class="space-y-2.5 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                            <div class="flex items-center justify-between text-xs">
+                                <span>Input A: Safety Loop Line Status</span>
+                                <button onclick="toggleCase('c3_a')" id="btn-c3-a" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-emerald-950 text-emerald-400 border border-emerald-700">1 (CLOSED/HEALTHY)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="box-c3-res" class="mt-4 p-3 rounded-lg border bg-slate-900/80 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <div id="led-c3" class="w-7 h-7 rounded-full led-off"></div>
+                            <span id="txt-c3" class="font-bold text-emerald-400">TRIP RELAY OFF (0)</span>
+                        </div>
+                        <span id="formula-c3" class="font-mono text-[11px] text-slate-400">Y = NOT(1) = 0</span>
+                    </div>
+                </div>
+
+                <!-- CASE 4: NAND GATE -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="bg-red-500/10 text-red-400 text-xs font-mono px-2 py-0.5 rounded border border-red-500/30">4. NAND Gate (Y = A · B)</span>
+                                <h3 class="text-base font-bold text-white mt-1">Dual Fuel Supply Inhibit</h3>
+                            </div>
+                            <span class="font-mono text-xs font-bold text-amber-300 bg-slate-900 px-2 py-1 rounded border border-slate-700" id="case-ic-4">74LS00</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mb-4">
+                            Mencegah pencampuran bahan bakar HFO dan MGO secara bersamaan pada katup penyuplai. Output bernilai <strong>0 (LOCKED)</strong> HANYA jika kedua katup dibuka bersamaan!
+                        </p>
+
+                        <div class="space-y-2.5 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                            <div class="flex items-center justify-between text-xs">
+                                <span>Input A: HFO Supply Valve Command</span>
+                                <button onclick="toggleCase('c4_a')" id="btn-c4-a" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-slate-400 border border-slate-700">0 (CLOSED)</button>
+                            </div>
+                            <div class="flex items-center justify-between text-xs border-t border-slate-800/80 pt-2">
+                                <span>Input B: MGO Supply Valve Command</span>
+                                <button onclick="toggleCase('c4_b')" id="btn-c4-b" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-emerald-950 text-emerald-400 border border-emerald-700">1 (OPEN)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="box-c4-res" class="mt-4 p-3 rounded-lg border bg-slate-900/80 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <div id="led-c4" class="w-7 h-7 rounded-full led-on-green"></div>
+                            <span id="txt-c4" class="font-bold text-emerald-400">OPERATION SAFE (1)</span>
+                        </div>
+                        <span id="formula-c4" class="font-mono text-[11px] text-slate-400">Y = NOT(0 · 1) = 1</span>
+                    </div>
+                </div>
+
+                <!-- CASE 5: NOR GATE -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="bg-teal-500/10 text-teal-400 text-xs font-mono px-2 py-0.5 rounded border border-teal-500/30">5. NOR Gate (Y = A + B)</span>
+                                <h3 class="text-base font-bold text-white mt-1">System Ready & Healthy Lamp</h3>
+                            </div>
+                            <span class="font-mono text-xs font-bold text-amber-300 bg-slate-900 px-2 py-1 rounded border border-slate-700" id="case-ic-5">74LS02</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mb-4">
+                            Lampu "SISTEM SIAP OPERASI" di ECR akan <strong>MENYALA (1)</strong> HANYA JIKA tidak ada alarm aktif (A=0) <strong>DAN</strong> tidak ada gangguan daya/fault (B=0).
+                        </p>
+
+                        <div class="space-y-2.5 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                            <div class="flex items-center justify-between text-xs">
+                                <span>Input A: Machinery Alarm Active</span>
+                                <button onclick="toggleCase('c5_a')" id="btn-c5-a" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-emerald-400 border border-slate-700">0 (NO ALARM)</button>
+                            </div>
+                            <div class="flex items-center justify-between text-xs border-t border-slate-800/80 pt-2">
+                                <span>Input B: Electrical Fault Active</span>
+                                <button onclick="toggleCase('c5_b')" id="btn-c5-b" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-emerald-400 border border-slate-700">0 (NO FAULT)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="box-c5-res" class="mt-4 p-3 rounded-lg border bg-slate-900/80 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <div id="led-c5" class="w-7 h-7 rounded-full led-on-green"></div>
+                            <span id="txt-c5" class="font-bold text-emerald-400">SYSTEM HEALTHY & READY (1)</span>
+                        </div>
+                        <span id="formula-c5" class="font-mono text-[11px] text-slate-400">Y = NOT(0 + 0) = 1</span>
+                    </div>
+                </div>
+
+                <!-- CASE 6: XOR GATE -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="bg-indigo-500/10 text-indigo-400 text-xs font-mono px-2 py-0.5 rounded border border-indigo-500/30">6. XOR Gate (Y = A ⊕ B)</span>
+                                <h3 class="text-base font-bold text-white mt-1">Control Location Discrepancy</h3>
+                            </div>
+                            <span class="font-mono text-xs font-bold text-amber-300 bg-slate-900 px-2 py-1 rounded border border-slate-700" id="case-ic-6">74LS86</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mb-4">
+                            Mendeteksi ketidaksesuaian transfer kontrol antara Anjungan (Bridge) dan Kamar Mesin (ECR). Peringatan <strong>ALARM ON (1)</strong> memicu jika posisi sakelar kontrol berbeda!
+                        </p>
+
+                        <div class="space-y-2.5 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                            <div class="flex items-center justify-between text-xs">
+                                <span>Input A: Bridge Telegraph Selector</span>
+                                <button onclick="toggleCase('c6_a')" id="btn-c6-a" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-slate-400 border border-slate-700">0 (ECR MODE)</button>
+                            </div>
+                            <div class="flex items-center justify-between text-xs border-t border-slate-800/80 pt-2">
+                                <span>Input B: ECR Control Switch Status</span>
+                                <button onclick="toggleCase('c6_b')" id="btn-c6-b" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-sky-950 text-sky-400 border border-sky-700">1 (BRIDGE MODE)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="box-c6-res" class="mt-4 p-3 rounded-lg border bg-slate-900/80 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <div id="led-c6" class="w-7 h-7 rounded-full led-on-amber"></div>
+                            <span id="txt-c6" class="font-bold text-amber-400">DISCREPANCY ALERT (1)</span>
+                        </div>
+                        <span id="formula-c6" class="font-mono text-[11px] text-slate-400">Y = 0 ⊕ 1 = 1</span>
+                    </div>
+                </div>
+
+                <!-- CASE 7: XNOR GATE -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl md:col-span-2 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="bg-rose-500/10 text-rose-400 text-xs font-mono px-2 py-0.5 rounded border border-rose-500/30">7. XNOR Gate (Y = A ⊙ B)</span>
+                                <h3 class="text-base font-bold text-white mt-1">Generator Synchronizer Paralleling Comparator</h3>
+                            </div>
+                            <span class="font-mono text-xs font-bold text-amber-300 bg-slate-900 px-2 py-1 rounded border border-slate-700" id="case-ic-7">74LS266</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mb-4">
+                            Dalam sinkronisasi Generator Kapal (Paralleling), Sakelar ACB <strong>hanya boleh di-close (1)</strong> apabila Gelombang Fase Busbar Utama dan Generator yang akan masuk berada dalam kondisi <strong>SAMA / IN-PHASE (Keduanya 0 atau Keduanya 1)</strong>.
+                        </p>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                            <div class="flex items-center justify-between text-xs">
+                                <span>Input A: Main Busbar Phase Angle Status</span>
+                                <button onclick="toggleCase('c7_a')" id="btn-c7-a" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-slate-400 border border-slate-700">0 (LOW PHASE)</button>
+                            </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span>Input B: Incoming Gen Phase Angle Status</span>
+                                <button onclick="toggleCase('c7_b')" id="btn-c7-b" class="px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-slate-400 border border-slate-700">0 (LOW PHASE)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="box-c7-res" class="mt-4 p-3 rounded-lg border bg-slate-900/80 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <div id="led-c7" class="w-7 h-7 rounded-full led-on-green"></div>
+                            <span id="txt-c7" class="font-bold text-emerald-400">IN-PHASE MATCHED / ACB CLOSE PERMITTED (1)</span>
+                        </div>
+                        <span id="formula-c7" class="font-mono text-[11px] text-slate-400">Y = NOT(0 ⊕ 0) = 1</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ================= TAB 4: MODUL DAFTAR & PENJELASAN KOMPONEN KAPAL ================= -->
+        <section id="section-components" class="hidden space-y-6">
+            
+            <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-lg">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-plug text-sky-400"></i> Modul Komponen & Field Interface Otomasi Kapal
+                </h2>
+                <p class="text-xs text-slate-300 mt-1">
+                    Komponen pemroses logika (IC TTL/CMOS/ECL) tidak bekerja sendirian di kapal. Modul ini menjelaskan antarmuka (interface) dari sensor fisik di kamar mesin hingga akuator beban berat.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <!-- COMPONENT 1: SENSORS -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="bg-sky-500/20 text-sky-400 p-2.5 rounded-lg border border-sky-500/30">
+                                <i class="fa-solid fa-gauge text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-white">Pressure & Temp Switches</h3>
+                                <span class="text-[10px] font-mono text-sky-400">Field Input Sensors</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                            Saklar mekanis / elektronik yang mendeteksi parameter fisik kamar mesin (Tekanan Oli, Suhu Air Pendingin, Tinggi Bilge) dan mengonversinya menjadi sinyal kontak listrik 0V (LOW) atau 24V DC (HIGH).
+                        </p>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-400">
+                        Signal: 24V DC Field Switch $\rightarrow$ Optocoupler
+                    </div>
+                </div>
+
+                <!-- COMPONENT 2: OPTOCOUPLER -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="bg-purple-500/20 text-purple-400 p-2.5 rounded-lg border border-purple-500/30">
+                                <i class="fa-solid fa-eye text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-white">Optocoupler (IC PC817)</h3>
+                                <span class="text-[10px] font-mono text-purple-400">Galvanic Optical Isolation</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                            Pemisah isolasi optik (Infrared LED + Photo-transistor). Melindungi IC Logika 5V / -5.2V dari lonjakan tegangan (Inductive Surge / Spikes) serta noise ground kapal yang berasal dari kabel sensor luar.
+                        </p>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-400">
+                        Isolation Voltage: up to 5000 V RMS
+                    </div>
+                </div>
+
+                <!-- COMPONENT 3: LOGIC IC -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="bg-amber-500/20 text-amber-400 p-2.5 rounded-lg border border-amber-500/30">
+                                <i class="fa-solid fa-microchip text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-white">Logic IC Processing</h3>
+                                <span class="text-[10px] font-mono text-amber-400">TTL / CMOS / ECL Gates</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                            Unit pembuat keputusan logika utama ($Y = f(A,B)$). Menerima sinyal standar logika dan menghasilkan sinyal output kecil ($\approx 20\text{ mA}$) untuk mengendalikan penggerak daya berikutnya.
+                        </p>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-400">
+                        Level Logika: TTL 5V / CMOS 3-15V / ECL -5.2V
+                    </div>
+                </div>
+
+                <!-- COMPONENT 4: TRANSISTOR DRIVER -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="bg-emerald-500/20 text-emerald-400 p-2.5 rounded-lg border border-emerald-500/30">
+                                <i class="fa-solid fa-wave-square text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-white">Transistor Driver (2N2222)</h3>
+                                <span class="text-[10px] font-mono text-emerald-400">Current Amplifier Stage</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                            Menguatkan arus keluaran IC logika yang sangat kecil agar mampu memberikan arus yang cukup ($\approx 100-300\text{ mA}$) untuk mengaktifkan kumparan (coil) Relay Elektromekanis.
+                        </p>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-400">
+                        Switching Capacity: 500mA Collector Current
+                    </div>
+                </div>
+
+                <!-- COMPONENT 5: RELAY -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="bg-rose-500/20 text-rose-400 p-2.5 rounded-lg border border-rose-500/30">
+                                <i class="fa-solid fa-toggle-on text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-white">Relay Elektromekanis</h3>
+                                <span class="text-[10px] font-mono text-rose-400">Actuator Switching</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                            Saklar magnetik pengubah dari kontrol DC kecil menjadi daya listrik besar AC 220V/380V. Menggerakkan Solenoid Valve Air Start, Alarm Siren Horn, dan Motor Starter Kapal.
+                        </p>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-400">
+                        Contact Rating: 10A / 250V AC Heavy Duty
+                    </div>
+                </div>
+
+                <!-- COMPONENT 6: FREEWHEELING DIODE -->
+                <div class="bg-ship-panel rounded-xl p-5 border border-slate-700 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="bg-teal-500/20 text-teal-400 p-2.5 rounded-lg border border-teal-500/30">
+                                <i class="fa-solid fa-shield-halved text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-white">Diode Freewheeling (1N4007)</h3>
+                                <span class="text-[10px] font-mono text-teal-400">Flyback Kickback Protection</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                            Dipasang paralel terbalik pada kumparan relay. Menyerap kejutan tegangan induksi balik (Back-EMF High Voltage Spike) saat relay mati agar transistor driver & IC logika tidak terbakar.
+                        </p>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-400">
+                        Reverse Voltage: 1000V Peak Protection
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer Credit -->
+    <footer class="bg-ship-panel border-t border-slate-800 py-4 mt-8 text-center text-xs text-slate-400">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p>© Simulator Logika Permesinan Kapal - TTL vs CMOS vs ECL Module</p>
+            <p class="font-medium text-slate-300">Dibuat oleh: <span class="text-sky-400 font-semibold">Rafael Sukirno</span></p>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT SIMULATOR ENGINE -->
+    <script>
+        // Global Application State
+        let activeTechnology = 'TTL'; // Default TTL
+        let currentGate = 'AND';
+        let inputA = 0;
+        let inputB = 0;
+
+        // Technology Voltage & Performance Profiles
+        const techProfiles = {
+            'TTL': {
+                name: 'TTL (74LS Series)',
+                vcc: '+5.0 V DC',
+                vLow: '0.2 V DC',
+                vHigh: '3.4 V DC',
+                vOutLow: '0.3 V DC',
+                vOutHigh: '3.6 V DC',
+                delay: '9 ns',
+                power: '2.0 mW',
+                icPrefix: '74LS',
+                icMap: { 'AND':'74LS08', 'OR':'74LS32', 'NOT':'74LS04', 'NAND':'74LS00', 'NOR':'74LS02', 'XOR':'74LS86', 'XNOR':'74LS266' }
+            },
+            'CMOS': {
+                name: 'CMOS (74HC Series)',
+                vcc: '+5.0 V DC (Flex 3-15V)',
+                vLow: '0.0 V DC',
+                vHigh: '5.0 V DC',
+                vOutLow: '0.05 V DC',
+                vOutHigh: '4.95 V DC',
+                delay: '25 ns',
+                power: '0.01 mW',
+                icPrefix: '74HC',
+                icMap: { 'AND':'74HC08', 'OR':'74HC32', 'NOT':'74HC04', 'NAND':'74HC00', 'NOR':'74HC02', 'XOR':'74HC86', 'XNOR':'CD4077' }
+            },
+            'ECL': {
+                name: 'ECL (MC100K Series)',
+                vcc: '-5.2 V DC (VEE)',
+                vLow: '-1.75 V DC',
+                vHigh: '-0.90 V DC',
+                vOutLow: '-1.70 V DC',
+                vOutHigh: '-0.88 V DC',
+                delay: '0.7 ns',
+                power: '35.0 mW',
+                icPrefix: 'MC100',
+                icMap: { 'AND':'MC100EL05', 'OR':'MC100EL01', 'NOT':'MC100EL04', 'NAND':'MC100EL09', 'NOR':'MC100EL01', 'XOR':'MC100EL07', 'XNOR':'MC100EL07' }
+            }
+        };
+
+        // 7 Marine Cases State
+        let marineCases = {
+            c1_a: 0, c1_b: 0, c1_c: 1, // Case 1: AND
+            c2_a: 0, c2_b: 0, c2_c: 0, // Case 2: OR
+            c3_a: 1,                   // Case 3: NOT
+            c4_a: 0, c4_b: 1,          // Case 4: NAND
+            c5_a: 0, c5_b: 0,          // Case 5: NOR
+            c6_a: 0, c6_b: 1,          // Case 6: XOR
+            c7_a: 0, c7_b: 0           // Case 7: XNOR
+        };
+
+        // Gate Specification Library
+        const gateData = {
+            'AND': {
+                title: 'Gerbang AND (AND Gate)',
+                formula: 'Y = A · B',
+                desc: 'Output Y akan bernilai 1 (HIGH) HANYA JIKA kedua masukan (A dan B) bernilai 1. Jika salah satu atau kedua input 0, maka output Y menjadi 0.',
+                shipTitle: 'Main Engine Start Permissive',
+                shipDesc: 'Di kapal, gerbang AND digunakan untuk mengunci sistem start mesin utama. Mesin hanya bisa diputar udara bilamana tekanan udara cukup DAN turning gear sudah dilepas.',
+                calc: (a, b) => a && b
+            },
+            'OR': {
+                title: 'Gerbang OR (OR Gate)',
+                formula: 'Y = A + B',
+                desc: 'Output Y akan bernilai 1 (HIGH) JIKA SALAH SATU atau kedua masukan bernilai 1. Output hanya bernilai 0 jika seluruh masukan bernilai 0.',
+                shipTitle: 'Common Machinery Alarm',
+                shipDesc: 'Digunakan dalam penggabungan sinyal bahaya. Sirine alarm kamar mesin akan aktif jika sensor tekanan oli drop ATAU suhu air pendingin tinggi.',
+                calc: (a, b) => a || b
+            },
+            'NOT': {
+                title: 'Gerbang NOT (Inverter)',
+                formula: 'Y = Ā',
+                desc: 'Gerbang NOT hanya memiliki 1 masukan. Output Y selalu merupakan kebalikan (inversi) dari status masukan A.',
+                shipTitle: 'Pembalik Sinyal Sensor Safety Interlock',
+                shipDesc: 'Digunakan untuk mengubah sinyal posisi Normally Closed (NC) menjadi status alarm High, atau membalik logika interlock keselamatan.',
+                calc: (a, b) => a === 0 ? 1 : 0
+            },
+            'NAND': {
+                title: 'Gerbang NAND (NOT-AND)',
+                formula: 'Y = A · B',
+                desc: 'NAND adalah kombinasi gerbang AND diikuti NOT. Output Y bernilai 0 (LOW) HANYA JIKA kedua input bernilai 1. NAND disebut juga gerbang Universal.',
+                shipTitle: 'Rangkaian Inhibitor Dual Fuel Supply',
+                shipDesc: 'Mencegah pembukaan dua katup penyuplai bahan bakar berbeda (HFO & MGO) secara serentak.',
+                calc: (a, b) => !(a && b) ? 1 : 0
+            },
+            'NOR': {
+                title: 'Gerbang NOR (NOT-OR)',
+                formula: 'Y = A + B',
+                desc: 'NOR adalah kombinasi OR diikuti NOT. Output Y akan bernilai 1 (HIGH) HANYA JIKA seluruh masukan bernilai 0 (LOW).',
+                shipTitle: 'System Healthy / All Clear Indicator',
+                shipDesc: 'Lampu indikator "SISTEM NORMAL" di ECR akan menyala 1 hanya jika tidak ada alarm A (0) dan tidak ada fault B (0).',
+                calc: (a, b) => !(a || b) ? 1 : 0
+            },
+            'XOR': {
+                title: 'Gerbang XOR (Exclusive-OR)',
+                formula: 'Y = A ⊕ B',
+                desc: 'Output Y bernilai 1 JIKA KEDUA INPUT BERBEDA. Jika kedua input memiliki nilai yang sama, output Y akan bernilai 0.',
+                shipTitle: 'Bridge vs ECR Control Location Discrepancy',
+                shipDesc: 'Membandingkan posisi sakelar kontrol antara Bridge dan ECR. Peringatan menyala jika terdapat ketidaksesuaian.',
+                calc: (a, b) => (a !== b) ? 1 : 0
+            },
+            'XNOR': {
+                title: 'Gerbang XNOR (Exclusive-NOR)',
+                formula: 'Y = A ⊙ B',
+                desc: 'XNOR adalah kebalikan dari XOR. Output Y bernilai 1 HANYA JIKA KEDUA INPUT SAMA (keduanya 0 atau keduanya 1).',
+                shipTitle: 'Generator Synchronizer Phase Comparator',
+                shipDesc: 'Memastikan fase busbar dan generator dalam keadaan persis sinkron sebelum sakelar ACB di-close.',
+                calc: (a, b) => (a === b) ? 1 : 0
+            }
+        };
+
+        // SVG Gate Symbol Generator
+        function getGateSVG(type) {
+            switch(type) {
+                case 'AND':
+                    return `<path d="M 30 20 L 70 20 C 95 20, 95 80, 70 80 L 30 80 Z" fill="#0284c7" fill-opacity="0.15" stroke="#38bdf8"/>
+                            <line x1="10" y1="35" x2="30" y2="35" stroke="#94a3b8"/>
+                            <line x1="10" y1="65" x2="30" y2="65" stroke="#94a3b8"/>
+                            <line x1="90" y1="50" x2="150" y2="50" stroke="#94a3b8"/>`;
+                case 'OR':
+                    return `<path d="M 30 20 Q 55 50 30 80 Q 75 80 95 50 Q 75 20 30 20 Z" fill="#0284c7" fill-opacity="0.15" stroke="#38bdf8"/>
+                            <line x1="10" y1="35" x2="38" y2="35" stroke="#94a3b8"/>
+                            <line x1="10" y1="65" x2="38" y2="65" stroke="#94a3b8"/>
+                            <line x1="95" y1="50" x2="150" y2="50" stroke="#94a3b8"/>`;
+                case 'NOT':
+                    return `<path d="M 40 20 L 90 50 L 40 80 Z" fill="#0284c7" fill-opacity="0.15" stroke="#38bdf8"/>
+                            <circle cx="96" cy="50" r="6" fill="#0f172a" stroke="#38bdf8"/>
+                            <line x1="10" y1="50" x2="40" y2="50" stroke="#94a3b8"/>
+                            <line x1="102" y1="50" x2="150" y2="50" stroke="#94a3b8"/>`;
+                case 'NAND':
+                    return `<path d="M 30 20 L 70 20 C 95 20, 95 80, 70 80 L 30 80 Z" fill="#0284c7" fill-opacity="0.15" stroke="#38bdf8"/>
+                            <circle cx="96" cy="50" r="6" fill="#0f172a" stroke="#38bdf8"/>
+                            <line x1="10" y1="35" x2="30" y2="35" stroke="#94a3b8"/>
+                            <line x1="10" y1="65" x2="30" y2="65" stroke="#94a3b8"/>
+                            <line x1="102" y1="50" x2="150" y2="50" stroke="#94a3b8"/>`;
+                case 'NOR':
+                    return `<path d="M 30 20 Q 55 50 30 80 Q 75 80 95 50 Q 75 20 30 20 Z" fill="#0284c7" fill-opacity="0.15" stroke="#38bdf8"/>
+                            <circle cx="101" cy="50" r="6" fill="#0f172a" stroke="#38bdf8"/>
+                            <line x1="10" y1="35" x2="38" y2="35" stroke="#94a3b8"/>
+                            <line x1="10" y1="65" x2="38" y2="65" stroke="#94a3b8"/>
+                            <line x1="107" y1="50" x2="150" y2="50" stroke="#94a3b8"/>`;
+                case 'XOR':
+                    return `<path d="M 40 20 Q 65 50 40 80 Q 85 80 105 50 Q 85 20 40 20 Z" fill="#0284c7" fill-opacity="0.15" stroke="#38bdf8"/>
+                            <path d="M 28 20 Q 53 50 28 80" fill="none" stroke="#38bdf8"/>
+                            <line x1="10" y1="35" x2="35" y2="35" stroke="#94a3b8"/>
+                            <line x1="10" y1="65" x2="35" y2="65" stroke="#94a3b8"/>
+                            <line x1="105" y1="50" x2="150" y2="50" stroke="#94a3b8"/>`;
+                case 'XNOR':
+                    return `<path d="M 40 20 Q 65 50 40 80 Q 85 80 105 50 Q 85 20 40 20 Z" fill="#0284c7" fill-opacity="0.15" stroke="#38bdf8"/>
+                            <path d="M 28 20 Q 53 50 28 80" fill="none" stroke="#38bdf8"/>
+                            <circle cx="111" cy="50" r="6" fill="#0f172a" stroke="#38bdf8"/>
+                            <line x1="10" y1="35" x2="35" y2="35" stroke="#94a3b8"/>
+                            <line x1="10" y1="65" x2="35" y2="65" stroke="#94a3b8"/>
+                            <line x1="117" y1="50" x2="150" y2="50" stroke="#94a3b8"/>`;
+            }
+        }
+
+        // Initialize App
+        window.onload = function() {
+            setGlobalTech('TTL');
+            selectGate('AND');
+            updateAllMarineCases();
+        };
+
+        // Navigation Switching
+        function switchTab(tabId) {
+            ['tech-compare', 'basic-gates', 'ship-cases', 'components'].forEach(id => {
+                document.getElementById(`section-${id}`).classList.add('hidden');
+                document.getElementById(`tab-${id}`).className = "px-3.5 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white whitespace-nowrap";
+            });
+
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabId}`).className = "px-3.5 py-2 rounded-lg transition-all duration-200 text-white bg-sky-600 font-semibold whitespace-nowrap";
+        }
+
+        // Switch Global Technology (TTL vs CMOS vs ECL)
+        function setGlobalTech(techKey) {
+            activeTechnology = techKey;
+
+            // Update top bar buttons
+            ['TTL', 'CMOS', 'ECL'].forEach(t => {
+                const btn = document.getElementById(`tech-btn-${t}`);
+                if (t === techKey) {
+                    if (t === 'TTL') btn.className = "px-3 py-1.5 rounded-lg font-bold font-mono transition-all duration-200 bg-amber-500 text-slate-950 shadow";
+                    if (t === 'CMOS') btn.className = "px-3 py-1.5 rounded-lg font-bold font-mono transition-all duration-200 bg-emerald-500 text-slate-950 shadow";
+                    if (t === 'ECL') btn.className = "px-3 py-1.5 rounded-lg font-bold font-mono transition-all duration-200 bg-pink-500 text-slate-950 shadow";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg font-bold font-mono transition-all duration-200 text-slate-400 hover:text-white";
+                }
+            });
+
+            const prof = techProfiles[techKey];
+
+            // Update Badge on Tab 2
+            const badge = document.getElementById('current-tech-badge');
+            badge.textContent = prof.name;
+            badge.className = techKey === 'TTL' ? 'font-bold text-amber-400' : (techKey === 'CMOS' ? 'font-bold text-emerald-400' : 'font-bold text-pink-400');
+
+            // Update Gate selector chip labels
+            ['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR', 'XNOR'].forEach(g => {
+                document.getElementById(`chip-id-${g}`).textContent = prof.icMap[g];
+            });
+
+            // Update IC Case badges in Tab 3
+            document.getElementById('case-ic-1').textContent = prof.icMap['AND'];
+            document.getElementById('case-ic-2').textContent = prof.icMap['OR'];
+            document.getElementById('case-ic-3').textContent = prof.icMap['NOT'];
+            document.getElementById('case-ic-4').textContent = prof.icMap['NAND'];
+            document.getElementById('case-ic-5').textContent = prof.icMap['NOR'];
+            document.getElementById('case-ic-6').textContent = prof.icMap['XOR'];
+            document.getElementById('case-ic-7').textContent = prof.icMap['XNOR'];
+
+            // Update Current Gate Display
+            selectGate(currentGate);
+        }
+
+        // Gate Selection Logic - Tab 2
+        function selectGate(gateName) {
+            currentGate = gateName;
+
+            document.querySelectorAll('.gate-btn').forEach(btn => {
+                btn.className = "gate-btn border border-slate-700 bg-slate-800/60 text-slate-300 font-bold py-2.5 px-3 rounded-lg flex flex-col items-center gap-1 transition-all";
+            });
+            const selectedBtn = document.getElementById(`btn-${gateName}`);
+            selectedBtn.className = "gate-btn border border-sky-500/50 bg-sky-950/60 text-sky-300 font-bold py-2.5 px-3 rounded-lg flex flex-col items-center gap-1 transition-all shadow-lg ring-1 ring-sky-500";
+
+            const data = gateData[gateName];
+            const prof = techProfiles[activeTechnology];
+
+            document.getElementById('display-ic-name').textContent = prof.icMap[gateName];
+            document.getElementById('display-gate-title').textContent = data.title;
+            document.getElementById('display-formula').textContent = data.formula;
+            document.getElementById('gate-description').textContent = data.desc;
+            document.getElementById('ship-app-title').textContent = data.shipTitle;
+            document.getElementById('ship-app-desc').textContent = data.shipDesc;
+
+            // Live Specs Update
+            document.getElementById('spec-delay').textContent = prof.delay;
+            document.getElementById('spec-power').textContent = prof.power;
+            document.getElementById('spec-vcc').textContent = prof.vcc;
+
+            document.getElementById('gate-svg-element').innerHTML = getGateSVG(gateName);
+
+            const inputBContainer = document.getElementById('container-input-B');
+            const colInputBHeaders = document.querySelectorAll('.col-input-b');
+
+            if (gateName === 'NOT') {
+                inputBContainer.classList.add('hidden');
+                colInputBHeaders.forEach(el => el.classList.add('hidden'));
+            } else {
+                inputBContainer.classList.remove('hidden');
+                colInputBHeaders.forEach(el => el.classList.remove('hidden'));
+            }
+
+            renderTruthTable();
+            calculateOutput();
+        }
+
+        function toggleInput(inputChannel) {
+            if (inputChannel === 'A') {
+                inputA = inputA === 0 ? 1 : 0;
+            } else if (inputChannel === 'B') {
+                inputB = inputB === 0 ? 1 : 0;
+            }
+            calculateOutput();
+        }
+
+        function calculateOutput() {
+            const prof = techProfiles[activeTechnology];
+
+            const btnA = document.getElementById('btn-toggle-A');
+            const indA = document.getElementById('indicator-input-A');
+            const txtA = document.getElementById('text-input-A');
+            const voltA = document.getElementById('voltage-A');
+
+            if (inputA === 1) {
+                btnA.className = "w-full py-2 px-3 rounded-lg font-mono font-bold text-sm transition-all duration-200 bg-sky-950 text-sky-300 border border-sky-500 shadow-md";
+                indA.className = "w-3 h-3 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]";
+                txtA.textContent = "1 (HIGH)";
+                voltA.textContent = prof.vHigh;
+            } else {
+                btnA.className = "w-full py-2 px-3 rounded-lg font-mono font-bold text-sm transition-all duration-200 bg-slate-800 text-slate-400 border border-slate-600 hover:border-slate-500";
+                indA.className = "w-3 h-3 rounded-full bg-slate-600";
+                txtA.textContent = "0 (LOW)";
+                voltA.textContent = prof.vLow;
+            }
+
+            const btnB = document.getElementById('btn-toggle-B');
+            const indB = document.getElementById('indicator-input-B');
+            const txtB = document.getElementById('text-input-B');
+            const voltB = document.getElementById('voltage-B');
+
+            if (inputB === 1) {
+                btnB.className = "w-full py-2 px-3 rounded-lg font-mono font-bold text-sm transition-all duration-200 bg-sky-950 text-sky-300 border border-sky-500 shadow-md";
+                indB.className = "w-3 h-3 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]";
+                txtB.textContent = "1 (HIGH)";
+                voltB.textContent = prof.vHigh;
+            } else {
+                btnB.className = "w-full py-2 px-3 rounded-lg font-mono font-bold text-sm transition-all duration-200 bg-slate-800 text-slate-400 border border-slate-600 hover:border-slate-500";
+                indB.className = "w-3 h-3 rounded-full bg-slate-600";
+                txtB.textContent = "0 (LOW)";
+                voltB.textContent = prof.vLow;
+            }
+
+            const output = gateData[currentGate].calc(inputA, inputB);
+
+            const ledOutput = document.getElementById('led-output');
+            const textOutput = document.getElementById('text-output');
+            const voltageOutput = document.getElementById('voltage-output');
+            const ledIcon = document.getElementById('led-icon');
+
+            if (output === 1) {
+                ledOutput.className = "w-12 h-12 rounded-full led-on-green flex items-center justify-center transition-all duration-300 border-2 border-emerald-400";
+                ledIcon.className = "fa-solid fa-lightbulb text-white text-xl";
+                textOutput.textContent = "1 (HIGH)";
+                textOutput.className = "font-mono font-bold text-sm text-emerald-400";
+                voltageOutput.textContent = prof.vOutHigh;
+            } else {
+                ledOutput.className = "w-12 h-12 rounded-full led-off flex items-center justify-center transition-all duration-300 border-2 border-slate-600";
+                ledIcon.className = "fa-solid fa-lightbulb text-slate-700 text-xl";
+                textOutput.textContent = "0 (LOW)";
+                textOutput.className = "font-mono font-bold text-sm text-slate-400";
+                voltageOutput.textContent = prof.vOutLow;
+            }
+
+            const shipStatus = document.getElementById('ship-app-status');
+            const shipReason = document.getElementById('ship-app-reason');
+            if (output === 1) {
+                shipStatus.textContent = "PERMITTED / ACTIVE (1)";
+                shipStatus.className = "font-bold text-emerald-400";
+                shipReason.textContent = "Kondisi logika terpenuhi secara penuh.";
+            } else {
+                shipStatus.textContent = "BLOCKED / INACTIVE (0)";
+                shipStatus.className = "font-bold text-rose-400";
+                shipReason.textContent = "Syarat logika belum terpenuhi oleh kombinasi input.";
+            }
+
+            highlightTruthTableRows();
+        }
+
+        function renderTruthTable() {
+            const tbody = document.getElementById('truth-table-body');
+            tbody.innerHTML = '';
+
+            const combinations = currentGate === 'NOT' 
+                ? [{a: 0, b: 0}, {a: 1, b: 0}]
+                : [{a: 0, b: 0}, {a: 0, b: 1}, {a: 1, b: 0}, {a: 1, b: 1}];
+
+            combinations.forEach((comb) => {
+                const out = gateData[currentGate].calc(comb.a, comb.b);
+                const tr = document.createElement('tr');
+                tr.id = `row-tt-${comb.a}-${comb.b}`;
+                tr.className = "transition-all duration-150 hover:bg-slate-800/80";
+
+                let html = `<td class="py-2.5 px-3">${comb.a}</td>`;
+                if (currentGate !== 'NOT') {
+                    html += `<td class="py-2.5 px-3 col-input-b">${comb.b}</td>`;
+                }
+                html += `<td class="py-2.5 px-3 font-bold ${out === 1 ? 'text-emerald-400 bg-emerald-950/20' : 'text-slate-500'}">${out}</td>`;
+
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
+
+            highlightTruthTableRows();
+        }
+
+        function highlightTruthTableRows() {
+            document.querySelectorAll('#truth-table-body tr').forEach(row => {
+                row.classList.remove('bg-sky-900/60', 'text-sky-200', 'font-bold', 'ring-1', 'ring-sky-500');
+            });
+
+            const activeRowId = currentGate === 'NOT'
+                ? `row-tt-${inputA}-0`
+                : `row-tt-${inputA}-${inputB}`;
+
+            const activeRow = document.getElementById(activeRowId);
+            if (activeRow) {
+                activeRow.classList.add('bg-sky-900/60', 'text-sky-200', 'font-bold', 'ring-1', 'ring-sky-500');
+            }
+        }
+
+        // ================= 7 MARINE CASES SIMULATION LOGIC =================
+        function toggleCase(key) {
+            marineCases[key] = marineCases[key] === 0 ? 1 : 0;
+            updateAllMarineCases();
+        }
+
+        function updateAllMarineCases() {
+            // Case 1: AND
+            const c1_res = (marineCases.c1_a === 1 && marineCases.c1_b === 1 && marineCases.c1_c === 1) ? 1 : 0;
+            updateButtonUI('btn-c1-a', marineCases.c1_a, "1 (AIR OK)", "0 (LOW AIR)");
+            updateButtonUI('btn-c1-b', marineCases.c1_b, "1 (DISENGAGED)", "0 (ENGAGED)");
+            updateButtonUI('btn-c1-c', marineCases.c1_c, "1 (NORMAL)", "0 (TRIPPED)");
+            document.getElementById('formula-c1').textContent = `Y = ${marineCases.c1_a} · ${marineCases.c1_b} · ${marineCases.c1_c} = ${c1_res}`;
+            if (c1_res === 1) {
+                document.getElementById('led-c1').className = "w-7 h-7 rounded-full led-on-green";
+                document.getElementById('txt-c1').textContent = "START PERMITTED (1)";
+                document.getElementById('txt-c1').className = "font-bold text-emerald-400";
+            } else {
+                document.getElementById('led-c1').className = "w-7 h-7 rounded-full led-off";
+                document.getElementById('txt-c1').textContent = "START BLOCKED (0)";
+                document.getElementById('txt-c1').className = "font-bold text-rose-400";
+            }
+
+            // Case 2: OR
+            const c2_res = (marineCases.c2_a === 1 || marineCases.c2_b === 1 || marineCases.c2_c === 1) ? 1 : 0;
+            updateButtonUI('btn-c2-a', marineCases.c2_a, "1 (LOW PRESS)", "0 (NORMAL)", true);
+            updateButtonUI('btn-c2-b', marineCases.c2_b, "1 (HIGH TEMP)", "0 (NORMAL)", true);
+            updateButtonUI('btn-c2-c', marineCases.c2_c, "1 (HIGH LEVEL)", "0 (NORMAL)", true);
+            document.getElementById('formula-c2').textContent = `Y = ${marineCases.c2_a} + ${marineCases.c2_b} + ${marineCases.c2_c} = ${c2_res}`;
+            if (c2_res === 1) {
+                document.getElementById('led-c2').className = "w-7 h-7 rounded-full led-on-red animate-pulse";
+                document.getElementById('txt-c2').textContent = "MASTER ALARM ACTIVE (1)";
+                document.getElementById('txt-c2').className = "font-bold text-rose-400";
+            } else {
+                document.getElementById('led-c2').className = "w-7 h-7 rounded-full led-off";
+                document.getElementById('txt-c2').textContent = "SYSTEM NORMAL (0)";
+                document.getElementById('txt-c2').className = "font-bold text-emerald-400";
+            }
+
+            // Case 3: NOT
+            const c3_res = marineCases.c3_a === 0 ? 1 : 0;
+            updateButtonUI('btn-c3-a', marineCases.c3_a, "1 (CLOSED/HEALTHY)", "0 (OPEN/TRIPPED)");
+            document.getElementById('formula-c3').textContent = `Y = NOT(${marineCases.c3_a}) = ${c3_res}`;
+            if (c3_res === 1) {
+                document.getElementById('led-c3').className = "w-7 h-7 rounded-full led-on-red animate-pulse";
+                document.getElementById('txt-c3').textContent = "TRIP RELAY ACTIVATED (1)";
+                document.getElementById('txt-c3').className = "font-bold text-rose-400";
+            } else {
+                document.getElementById('led-c3').className = "w-7 h-7 rounded-full led-off";
+                document.getElementById('txt-c3').textContent = "TRIP RELAY OFF (0)";
+                document.getElementById('txt-c3').className = "font-bold text-emerald-400";
+            }
+
+            // Case 4: NAND
+            const c4_res = !(marineCases.c4_a === 1 && marineCases.c4_b === 1) ? 1 : 0;
+            updateButtonUI('btn-c4-a', marineCases.c4_a, "1 (OPEN)", "0 (CLOSED)");
+            updateButtonUI('btn-c4-b', marineCases.c4_b, "1 (OPEN)", "0 (CLOSED)");
+            document.getElementById('formula-c4').textContent = `Y = NOT(${marineCases.c4_a} · ${marineCases.c4_b}) = ${c4_res}`;
+            if (c4_res === 1) {
+                document.getElementById('led-c4').className = "w-7 h-7 rounded-full led-on-green";
+                document.getElementById('txt-c4').textContent = "OPERATION SAFE (1)";
+                document.getElementById('txt-c4').className = "font-bold text-emerald-400";
+            } else {
+                document.getElementById('led-c4').className = "w-7 h-7 rounded-full led-on-red animate-pulse";
+                document.getElementById('txt-c4').textContent = "DUAL FUEL INHIBIT LOCKOUT (0)";
+                document.getElementById('txt-c4').className = "font-bold text-rose-400";
+            }
+
+            // Case 5: NOR
+            const c5_res = !(marineCases.c5_a === 1 || marineCases.c5_b === 1) ? 1 : 0;
+            updateButtonUI('btn-c5-a', marineCases.c5_a, "1 (ALARM ACTIVE)", "0 (NO ALARM)", true);
+            updateButtonUI('btn-c5-b', marineCases.c5_b, "1 (FAULT ACTIVE)", "0 (NO FAULT)", true);
+            document.getElementById('formula-c5').textContent = `Y = NOT(${marineCases.c5_a} + ${marineCases.c5_b}) = ${c5_res}`;
+            if (c5_res === 1) {
+                document.getElementById('led-c5').className = "w-7 h-7 rounded-full led-on-green";
+                document.getElementById('txt-c5').textContent = "SYSTEM HEALTHY & READY (1)";
+                document.getElementById('txt-c5').className = "font-bold text-emerald-400";
+            } else {
+                document.getElementById('led-c5').className = "w-7 h-7 rounded-full led-off";
+                document.getElementById('txt-c5').textContent = "NOT READY / FAULTED (0)";
+                document.getElementById('txt-c5').className = "font-bold text-rose-400";
+            }
+
+            // Case 6: XOR
+            const c6_res = (marineCases.c6_a !== marineCases.c6_b) ? 1 : 0;
+            updateButtonUI('btn-c6-a', marineCases.c6_a, "1 (BRIDGE MODE)", "0 (ECR MODE)");
+            updateButtonUI('btn-c6-b', marineCases.c6_b, "1 (BRIDGE MODE)", "0 (ECR MODE)");
+            document.getElementById('formula-c6').textContent = `Y = ${marineCases.c6_a} ⊕ ${marineCases.c6_b} = ${c6_res}`;
+            if (c6_res === 1) {
+                document.getElementById('led-c6').className = "w-7 h-7 rounded-full led-on-amber animate-pulse";
+                document.getElementById('txt-c6').textContent = "CONTROL DISCREPANCY ALERT (1)";
+                document.getElementById('txt-c6').className = "font-bold text-amber-400";
+            } else {
+                document.getElementById('led-c6').className = "w-7 h-7 rounded-full led-off";
+                document.getElementById('txt-c6').textContent = "LOCATIONS MATCHED (0)";
+                document.getElementById('txt-c6').className = "font-bold text-emerald-400";
+            }
+
+            // Case 7: XNOR
+            const c7_res = (marineCases.c7_a === marineCases.c7_b) ? 1 : 0;
+            updateButtonUI('btn-c7-a', marineCases.c7_a, "1 (HIGH PHASE)", "0 (LOW PHASE)");
+            updateButtonUI('btn-c7-b', marineCases.c7_b, "1 (HIGH PHASE)", "0 (LOW PHASE)");
+            document.getElementById('formula-c7').textContent = `Y = NOT(${marineCases.c7_a} ⊕ ${marineCases.c7_b}) = ${c7_res}`;
+            if (c7_res === 1) {
+                document.getElementById('led-c7').className = "w-7 h-7 rounded-full led-on-green";
+                document.getElementById('txt-c7').textContent = "IN-PHASE MATCHED / ACB CLOSE PERMITTED (1)";
+                document.getElementById('txt-c7').className = "font-bold text-emerald-400";
+            } else {
+                document.getElementById('led-c7').className = "w-7 h-7 rounded-full led-off";
+                document.getElementById('txt-c7').textContent = "OUT OF PHASE / ACB BLOCKED (0)";
+                document.getElementById('txt-c7').className = "font-bold text-rose-400";
+            }
+        }
+
+        function updateButtonUI(btnId, val, textOn, textOff, isAlarmType = false) {
+            const btn = document.getElementById(btnId);
+            if (val === 1) {
+                btn.className = isAlarmType 
+                    ? "px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-rose-950 text-rose-400 border border-rose-700"
+                    : "px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-emerald-950 text-emerald-400 border border-emerald-700";
+                btn.textContent = textOn;
+            } else {
+                btn.className = isAlarmType 
+                    ? "px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-emerald-400 border border-slate-700"
+                    : "px-2.5 py-1 rounded font-mono font-bold text-[11px] bg-slate-800 text-rose-400 border border-slate-700";
+                btn.textContent = textOff;
+            }
+        }
+    </script>
+</body>
+</html>
